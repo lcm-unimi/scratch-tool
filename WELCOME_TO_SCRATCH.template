@@ -1,0 +1,26 @@
+ENJOY YOUR STAY
+
+Benvenuto nel disco di Scratch di NODE 
+Qui puoi salvare i tuoi file senza limiti di quota, e.g. i risultati di
+simulazioni o database.
+
+Crea una tua cartella personale che si chiami come il tuo nome utente.
+Modificane i permessi in modo che solo tu possa accedervi: chmod 700 <username>.
+Tutte le cartelle che non rispettano questa regola e i file in /local/scratch
+non inseriti nella propria sottocartella (e.g. /local/scrach/pippo.txt) verranno
+rimossi.
+
+Tieni a mente che questi scrtach disk sono una risorsa comune a tutti gli
+utenti. Ti preghiamo quindi di utilizzarli usando il buon senso e avendo
+rispetto per le necessita' altrui. Cerca di liberare lo spazio utilizzato il
+prima possibile, spostando i file che vuoi conservare nella tua home.
+In ogni caso, ricorda sempre che le cartelle con data di acesso risalente a
+piu' di 1 anno fa vengono cancellati automaticamente e, a differenza della tua
+della tua home questi dischi non sono soggetti a backup.
+Inoltre, in casi eccezionali, gli amministratori potrebbero contattare gli utenti
+per chiedere loro di ridimensionare le proprie cartelle e, in caso di mancata
+risposta entro 1-2 settimana, procedere all'eliminazione delle suddette.
+
+Per qualsiasi domanda o problema, scrivere a working@lcm.mi.infn.it
+
+Lo staff di LCM

@@ -1,0 +1,137 @@
+#!/usr/bin/python
+
+# Get a snapshot of the cluster load by means of ps command, launched from a ssh session, here, python Threads.
+# See sshcmd2node module for datails.
+# FIXME: ssh command is good if you're root from a server. User-side tool should use a telenet service to avoid 'Too many login' problems and password prompt if someone does not have keys 
+# created:      Andrea Silva (08-04-2017)
+# last edit:    Andrea Silva (25-05-2017)
+
+from time import time
+import argparse
+import subprocess, sys, os, re
+from threading import Thread
+from re import sub
+
+sys.path.append("/home/150/scratch")
+from sshcmd2node import Node
+def print_progressbar(index, num) :
+     sys.stderr.write('\r ['
+                         + '='*index
+                         + '>'*(1-int(index/num))
+                         + ' '*(num-index-1) + ']')
+     sys.stderr.flush()
+ 
+# Long output header...
+psauxheader="USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND"
+####################
+# COMMAND DEFINITION
+####################
+cputhold='50'
+checkload="ps aux | awk '$3>"+cputhold+"{print}' | sort -rk 3"
+
+## Main program
+
+desc="""Get cluster load by ssh connection and ps aux query (a calculation is defined as cpuload>"""+cputhold+"""%)	
+        If the nodes aren't in the ~/.ssh/know_hosts, you will be asked to continue 
+        (e.g. it's the first time you run this command)
+        Use the -s flag to run in serial and answer ssh prompts"""
+
+##  Argument Parser definition
+parser = argparse.ArgumentParser(description=desc)
+
+# optional arguments
+parser.add_argument( '-n', nargs='+', dest='node', default=[], 
+                     help='select one or more nodes by hostname (at least one)' )
+parser.add_argument( '-l', '--long', action='store_true', dest='long',
+                     help='be verbose: returns ps output for selected nodes' )
+parser.add_argument( '-p', '--disable-progbar', action='store_false', dest='progbar',
+                     help='disable the progression bar.' )
+parser.add_argument( '-s', '--serial', action='store_true', dest='serial',
+                     help="""Do the queries to nodes in serial rather than parallel (default). 
+Hint: useful when connecting for the first time.
+Imply -p option.""" )
+# End arg parser definition
+args = parser.parse_args()
+
+if args.serial : args.progbar=False
+### HOST LIST ###
+# Only edit here to add/remove/change hostlist
+
+Hosts = [
+    ('abe',     'LCM1'),
+    ('crash',   'LCM1'),
+    ('duke',    'LCM1'),
+    ('glados',  'LCM1'),
+    ('lara',    'LCM1'),
+    ('link',    'LCM1'),
+    ('king',    'LCM1'),
+    ('pang',    'LCM1'),
+    ('pong',    'LCM1'),
+    ('snake',   'LCM1'),
+    ('sonic',   'LCM1'),
+    ('spyro',   'LCM1'),
+    ('yoshi',   'LCM1'),
+    ('actarus', 'LCM2'),
+    ('elwood',  'LCM2'),
+    ('gex',     'LCM2'),
+    ('gin',     'LCM2'),
+    ('jake',    'LCM2'),
+    ('kirk',    'LCM2'),
+    ('martini', 'LCM2'),
+    ('picard',  'LCM2'),
+    ('q',       'LCM2'),
+    ('raziel',  'LCM2'),
+    ('sarek',   'LCM2'),
+    ('spock',   'LCM2'),
+    ('tron',    'LCM2'),
+    ('worf',    'LCM2'),
+    ('zombie',  'LCM2'),
+]
+
+# Create nodes list according to options. 
+##  All nodes
+nodes=[ Node(x[0],x[1], checkload) for x in Hosts ]
+##  Select given nodes
+if len(args.node) :
+    nodes=[ x for x in nodes if x.hostname in args.node ]
+
+# Start time from here, when the threads are created
+start = time()
+# Start threads
+for i in nodes :
+    i.start()
+    if args.serial: i.join()
+	
+# Get results: rejoin threads when their work is done
+num=len(nodes)
+index=0
+print ' Querying ' + str(num) + ' hosts...'
+for i in nodes:
+    i.join()
+    index += 1
+    if args.progbar : print_progressbar(index, num)
+# New line after progress bar     
+print '\n Done... (%(t).3f s)' % {'t': (time() - start)}
+
+for n in nodes :
+    if not n.up : 
+        print "==>", n.hostname, "is not up"
+        continue
+    exitcode,output,error = n.cmdresult
+    if exitcode == 0 :
+        if len(output)>1 : 
+            print "==>", n.hostname, ": Running", len(output), "calculation(s)"
+            # If long output is required, print all the matcher ps aux lines
+            if args.long:
+                print '\t',psauxheader
+                for process in output:
+                    print '\t', process
+    else :
+        # Ssh "bug" can't log in twice on the same node. Should use Telnet instead
+        if re.search("Too many logins", '\n'.join(output)) :
+            print "==> Too many logins on", n.hostname
+        else :
+            print >> sys.stderr, "Query to host", n.hostname,"exited with", exitcode
+            if args.long:         
+                print >> sys.stderr, "stderr:", error, '\n',                                                \
+                                     "stdout",  '\n'.join(output)

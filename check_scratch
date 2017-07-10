@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# Check for folders that do not match a username and files in /local/scratch/
+########
+# created by Silva () 
+# last edit  Silva (7-10-2017)
+#######
+
+path2scratch="/local/scratch/"
+# Search for files other than welcome file in the scratch dir
+find $path2scratch -maxdepth 1 -type f ! -name "WELCOME_TO_SCRATCH" -exec echo "ERR: Find file at level 0: {}" \;
+
+# Save all folders in scratch
+folders=( $(find $path2scratch -maxdepth 1 -mindepth 1 -type d | sed  "s:$path2scratch::") )
+
+for fld in ${folders[@]} 
+do 
+        # Search for folder name in usernames database
+        user=$(finger -smp $fld 2>/dev/null | sed -e '1d' | awk '{print $1}' | uniq) ; 
+        if ! [ "$user" ] 
+        then
+                echo "ERR: directory $fld doesn't match any user in db"
+        fi
+        # Check last access to folder
+        lastaccess=$(stat --format "%X" "$path2scratch/$fld")
+        years_sinceacc=$(echo $lastaccess $(date +%s) | awk '{t=($2-$1)} END{ print int(t/(365*24*60*60))}')
+        if [[ $years_sinceacc -ge 1 ]] 
+        then
+                echo "WARNING: Last acces to $fld is older than $years_sinceacc years"
+        fi
+done
